@@ -1,0 +1,234 @@
+#!/usr/local/bin/perl -w
+#
+# Script to make sense of a Sybase interfaces file.
+#
+# Usage:
+#      sybserv [-I interfaces] [<SERVER> ...]
+#
+# For each server passed on the command line, this script prints 
+# one line report listing server name and IP address, hostname and
+# port number for both the query and master services.
+#
+# If no server is given on the command line, then all servers in the 
+# interfaces file are displayed.
+#
+# Author: Dave Cross <dave@mag-sol.com>
+#
+# The most recent version of this program can (hopefully) be downloaded
+# from <http://www.mag-sol.com/Download.html>,
+# 
+# (c) 1998, 2000 Magnum Solutions Ltd, All rights reserved.
+#
+# This program is free software; you are free to redistribute it
+# and/or modify it under the same terms as Perl itself.
+#
+# $Id: sybserv,v 1.2 2000/06/04 17:36:30 dave Exp $
+#
+# $Log: sybserv,v $
+# Revision 1.2  2000/06/04 17:36:30  dave
+# Renamed 'readme' and 'copying' to 'README' and 'COPYING'.
+# Added header info.
+#
+#
+
+my $VERSION = sprintf "%d.%02d", '$Revision: 1.2 $' =~ /(\d+)\.(\d+)/;
+
+use strict;
+use Getopt::Std;
+use vars qw($opt_I $opt_h $opt_v);
+
+# List of currently supported Operating Systems.
+my %os = (solaris => 1, hpux => 1, linux => 1);
+
+# Check we can function correctly on this operating system.
+($os{$^O}) || die "You cannot use this script under $^O.\n";
+
+getopts('I:hv');
+
+if ($opt_h) {
+  usage();
+  exit;
+}
+
+if ($opt_v) {
+  version();
+  exit;
+}
+
+# Work out which interfaces file we're dealing with.
+my $file = $opt_I || "$ENV{SYBASE}/interfaces";
+
+# Check interfaces files exists and is readable.
+(-s $file) or die "Cannot find interface file $file\n";
+(-r _) or die "Cannot read interface file $file\n";
+open(INT, $file) or die "Cannot open interface file $file: $!\n";
+
+my ($search, $server);
+my (%m, %q);
+
+# Define format for output.
+format STDOUT_TOP =
+
+Server       Query                                Master
+Name         IP Address      Hostname        Port IP Address      Hostname        Port
+--------------------------------------------------------------------------------------
+.
+
+format STDOUT = 
+@<<<<<<<<<<< @<<<<<<<<<<<<<< @<<<<<<<<<<<<<< @<<< @<<<<<<<<<<<<<< @<<<<<<<<<<<<<< @<<<
+ $server, $q{ip}, $q{host}, $q{port}, $m{ip}, $m{host}, $m{port}
+.
+
+# If we've been passed any command line arguments, assume they're 
+# all server names and search for them one at a time.
+if (scalar @ARGV) {
+  foreach $search (@ARGV) {
+    while (<INT>) {
+      next unless /^\w/;
+
+      # If we find our server name at the start of a line...
+      if (/^($search)\s/) {
+	# ... process the server...
+	$server = $1;
+	&process_server;
+	# ... and display the results.
+	write;
+      }
+    }
+
+    # Seek to the start of the file so we can begin looking for the
+    # next server argument.
+    seek(INT, 0, 0);
+  }
+
+# If we've been passed no command line arguments, just list every server 
+# in the interfaces file.
+} else {
+  while (<INT>) {
+    # This is a good approximation of how a server name
+    # looks in a Sybase interfaces file.
+    if (/^\w/) {
+      ($server) = split(/\s/);
+      &process_server;
+      write;
+    }
+  }
+}
+
+close(INT);
+
+# Handle all of the details for a given server. 
+sub process_server {
+  my @recs;
+
+  while (<INT>) {
+    last unless /^\t/;
+    push @recs, $_;
+  }
+
+  # At this point we've read one more line than we wanted to.
+  # Generally this isn't a problem as the line following a server
+  # definition will be blank, but better to be safe by seeking back
+  # in the file by the length of this line. This ensures that the
+  # same line will be read next time round the main loop.
+  seek(INT, -length, 1);
+
+  foreach (@recs) {
+    s/^\t//;
+    
+    my $rec = parse_rec($_);
+    if ($rec->{type} eq 'query') {
+      %q = %$rec;
+    } elsif ($rec->{type} eq 'master') {
+      %m = %$rec;
+    }
+  }
+}
+
+# Parse a 'master' or 'query' record and return a reference to an array
+# containing the keys:
+#   type:   either 'master' or 'query'
+#   ip:     the IP address of the server
+#   port:   the port that the server is on
+#   host:   the canonical hostname of the server
+sub parse_rec {
+  local $_ = shift;
+
+  my $rec = {};
+
+  if ($^O eq 'solaris') {
+    my $hex = '[0-9a-fA-F]';
+
+    my @recs = split;
+    $rec->{type} = $recs[0];
+    
+    # Under Solaris the IP and Port number are combined in a huge
+    # hex string. The following line strips this string apart.
+    $recs[4] =~ /^\\x0002($hex{4})($hex{2})($hex{2})($hex{2})($hex{2})/;
+
+    $rec->{ip} = hex($2) . "." . hex($3) . "." . hex($4) . "." . hex($5);
+    $rec->{port} = hex($1);
+    $rec->{host} = gethostbyaddr(pack('C4', split('\.', $rec->{ip})), 2) 
+      || '[none]';
+
+  } elsif ($^O eq 'hpux' or $^O eq 'linux') {
+    my @recs = split;
+    $rec->{type} = $recs[0];
+    $rec->{port} = $recs[4];
+
+    # Under HP-UX $rec[3] will contain either an IP address or the hostname.
+    # We work out which it is (by matching a regex which defines an IP 
+    # address) and calculate the other one.
+    if ($recs[3] =~ /\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/) {
+      $rec->{ip} = $recs[3];
+      $rec->{host} = gethostbyaddr(pack('C4', split('\.', $rec->{ip})), 2) 
+	|| '[none]';
+    } else {
+      $rec->{host} = $recs[3];
+      $rec->{ip} = join('.', unpack('C4', gethostbyname($rec->{host})));
+    }    
+  }
+
+  $rec;
+}
+
+sub version {
+  print << "END";
+
+sybserv $VERSION
+(c) 1998, 2000 Magnum Solutions. All rights reserved.
+
+This program is free software; you are free to redistribute it
+and/or modify it under the same terms as Perl itself.
+
+END
+}
+
+sub usage {
+  print << "END";
+
+sybserv [-v] [-h] [-I<interfaces>] [server ...]
+
+  -v displays version information
+  -h displays help (this message)
+  -I examines <interfaces> rather than the default interfaces
+     file \$SYBASE/interfaces.
+
+  server ... is a optional list of server names
+
+sybserv displays various useful information about the Sybase servers
+listed in the given interfaces file. The information displayed includes
+the Sybase server name, the IP address and hostname of the machine where
+the server is running, together with the port number that the server is
+listening on.
+
+If a list of servers is given then details will be listed only for servers
+in that list, otherwise all servers in the file will be listed. Note that
+the servers in the list need not be full server names as they are, in fact,
+treated as Perl regular expressions.
+
+END
+}
+
+__END__
+

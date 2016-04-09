@@ -1,0 +1,102 @@
+                     M S - E N V    v 1 . 4
+                   --------------------------
+
+ms-env.pl is a simple CGI script for World Wide Web pages.
+It allows you to find out various useful things about the
+Perl environment on your web server. This is particularly
+useful if you don't have telnet access to you ISP.
+
+
+
+AVAILABILITY
+
+The latest version of ms-mail should always be available from:
+
+     http://www.mag-sol.com/Download.shtml
+
+
+
+PREREQUISITES
+
+In order to install and use this script you will need Perl version
+5.002 or better.  This package also depends on packages that are 
+distributed separately from perl.  We recommend that you have
+the following packages installed before you install ms-env:
+
+  CGI            (bundled with perl5.004 and better)
+
+These packages should be available on CPAN (the Comprehensive
+Perl Archive Network) and your nearest CPAN mirror can be found
+at www.perl.com.
+
+
+
+INSTALLATION
+
+ms-env is distributed as a gzipped tar file. To extract the files
+from the archive type the following commands:
+
+    gunzip ms-env.tar.gz
+    tar xvf ms-env.tar
+
+You will end up with three files called README (this file), COPYING
+and ms-env.pl.
+
+Installation of ms-env is as simple as copying the file ms-env.pl
+into the cgi directory of your web server. This directory may be called
+cgi or cgi-bin or perhaps something completely different. If in doubt
+ask the person responsible for running your web server.
+
+
+
+USAGE
+
+The simplest (and probably most useful) way to run ms-perl is simply
+to enter the URL of the script in you browser. For example ms-perl
+is installed on www.mag-sol.com in the cgi directory. Therefore if 
+you enter the address:
+
+    http://www.mag-sol.com/cgi/ms-env.pl
+	
+in you browser, you will see the output of the script which will
+tell you various useful things about my Perl installation (like 
+how out of date my Perl is!)
+
+If you install ms-perl on your web server you shouild replace
+www.mag-sol.com with the address of your web server. If in doubt
+ask the person responsible for running your web server.
+
+ms-perl will give you a number of useful details about the Perl
+environment on your web server. These are:
+
+* The version of Perl installed
+
+* The version of CGI.pm installed
+
+* The library path that Perl runs with
+
+* The complete list of modules installed on that path
+
+
+
+DOCUMENTATION
+
+This file is currently all of the documentation you get! if you think 
+you need any more, please let me know.
+
+
+
+SUPPORT
+
+Questions about using this script should be directed to the author at
+dave@mag-sol.com. I also monitor the newsgroup comp.infosys.www.authoring.cgi
+which would be another good place to ask questions.
+
+
+
+COPYRIGHT
+
+(c) 1999, 2000 Magnum Solutions Ltd, All rights reserved.
+
+This script is free software; you are free to redistibute it
+and/or modify it under the same terms as Perl itself.

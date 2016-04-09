@@ -1,0 +1,93 @@
+                     S Y B S E R V   V 2 . 0
+                   ---------------------------
+
+sybserv is a simple script to extract the details about Sybase Servers
+from an interfaces file. For the servers it is asked to report on, it 
+will list the Server name together with the hostname, IP address and 
+port number of both the master and query services.
+
+
+
+AVAILABILITY
+
+The latest version of ms-mail should always be available from:
+
+     http://www.mag-sol.com/Download.html
+
+
+
+PREREQUISITES
+
+In order to install and use this script you will need Perl version
+5.002 or better.
+
+You'll also need Sybase SQL Server installed on your server.
+
+Currently sybserv only works on Solaris, HP-US and Linux.
+
+
+
+INSTALLATION
+
+sybserv is distributed as a gzipped tar file. To extract the files
+from the archive type the following commands:
+
+    gunzip sybserv.2.0.tar.gz
+    tar xvf sybserv.2.0.tar
+
+You will end up with three files called README (this file), COPYING
+and sybserv..
+
+Installation of ms-mail is as simple as copying the file sybserv.pl
+into a directory that is on your executable path and changing the first
+line of the script to point to your Perl executable.
+
+
+
+USAGE
+
+sybserv is called from the command line. In its simplest form it is 
+called without parameters. It will then list all of the SQL servers
+found in the default Sybase interfaces file. For each server. it will
+list the name of the server together with the name, IP address and
+port number of both the master and query services.
+
+If sybserv is called with one or more server names as arguments it 
+will report on those servers if found in the interfaces files.
+
+e.g. sybserv SYBASE PRODUCTION TEST1
+
+will only report on Sybase servers called 'SYBASE', 'PRODUCTION'
+and 'TEST1'. Please note that each of these server names can be
+Perl regular expressions, which will therefore more than one
+server name (n.b. as Perl REs and shell wildcard characters 
+sometimes overlap, you'll probably want to quote these arguments).
+
+e.g. sybserv 'SYB.*'
+
+will report on all Sybase servers that start with the string 'SYB'.
+
+
+
+
+DOCUMENTATION
+
+This file is currently all of the documentation you get! if you think 
+you need any more, please let me know.
+
+
+
+SUPPORT
+
+Questions about using this script should be directed to the author at
+dave@mag-sol.com. I also monitor the newsgroup comp.databases.sybase
+which would be another good place to ask questions.
+
+
+
+COPYRIGHT
+
+(c) 1998, 2000, Magnum Solutions Ltd, All rights reserved.
+
+This script is free software; you are free to redistibute it
+and/or modify it under the same terms as Perl itself.

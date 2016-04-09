@@ -1,0 +1,17 @@
+
+<table border=1>
+<tr><th>Name:</th><td>[% person.name %]</td></tr>
+<tr><th>Sex:</th><td>[% person.sex %]</td></tr>
+<tr><td>&nbsp;</td></tr>
+<tr><th>Born:</th><td>[% person.birth.date %] ([% person.birth.place %])</td></tr>
+<tr><th>Died:</th><td>[% person.death.date %] [% IF person.death.place %]([% person.death.place %])[% END %]</td></tr>
+<tr><td colspan="2">&nbsp;</td></tr>
+<tr><th>Mother:</th><td><a href="[% href(person.mother.id) %]">[% person.mother.name %]</a></td></tr>
+<tr><th>Father:</th><td><a href="[% href(person.father.id) %]">[% person.father.name %]</a></td></tr>
+<tr><td colspan="2">&nbsp;</td></tr>
+<tr><th>Spouses:</th><td>&nbsp;</td></tr>[% FOREACH spouse = person.spouses %]
+<tr><th>&nbsp;</th><td><a href="[% href(spouse.fam) %]">[% spouse.name %]</a></td></tr>[% END %]
+<tr><td colspan="2">&nbsp;</td></tr>
+<tr><th>Children: </th><td>&nbsp;</td></tr>[% FOREACH child = person.children %]
+<tr><th>&nbsp;</th><td><a href="[% href(child.id) %]">[% child.name %]</a></td></tr>[% END %]
+</table>

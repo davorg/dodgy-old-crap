@@ -1,0 +1,142 @@
+                     M S - M A I L    v 1 . 0
+                   ----------------------------
+
+ms-mail.pl is a simple form mail script for World Wide Web pages.
+It allows you to capture data from a form on a web page and to
+have the data emailed to your choice of address.
+
+
+
+AVAILABILITY
+
+The latest version of ms-mail should always be available from:
+
+     http://www.mag-sol.com/Download.html
+
+
+
+PREREQUISITES
+
+In order to install and use this script you will need Perl version
+5.002 or better.  This package also depends on packages that are 
+distributed separately from perl.  We recommend that you have
+the following packages installed before you install ms-guest:
+
+  CGI            (bundled with perl5.004 and better)
+  Mail::Mailer	 (part of MailTools)
+
+These packages should be available on CPAN (the Comprehensive
+Perl Archive Network) and your nearest CPAN mirror can be found
+at www.perl.com.
+
+
+
+INSTALLATION
+
+ms-mail is distributed as a gzipped tar file. To extract the files
+from the archive type the following commands:
+
+    gunzip ms-mail.tar.gz
+    tar xvf ms-mail.tar
+
+You will end up with three files called README (this file), COPYING
+and ms-mail.pl.
+
+Installation of ms-mail is as simple as copying the file ms-mail.pl
+into the cgi directory of your web server. This directory may be called
+cgi or cgi-bin or perhaps something completely different. If in doubt
+ask the person responsible for running your web server.
+
+
+
+USAGE
+
+ms-mail is called from a web page that has an HTML form on it. If you
+are unfamiliar with HTML form elements you sohlud review them before
+trying to use ms-mail. Good places to look for help on HTML elements
+include www.w3c.org and www.htmlhelp.com. 
+
+ms-mail should be the 'action' attribute of the <FORM> tag that starts
+your HTML form. You will need to put the full path to the script in the
+tag. This normally means prepending 'cgi' or 'cgi-bin' to the name of 
+the script. Your form tag shloud therefore look like:
+
+<FORM ACTION='/cgi/ms-mail.pl'>
+
+Between this tag and the end of form tag, </FORM>, you will have a number
+of <INPUT> tags. These can be of many types (again, see a good HTML
+reference for details) and allow the form to contain all common GUI
+controls (aka 'widgets'). Each input element will have a name. ms-mail
+uses a number of specially named form elements to control its behaviour.
+Some of these are essential to the correct working of ms-mail and others
+are optional.
+
+Any form elements without a recognised ms-mail name will be put in the
+email and sent to your chosen address.
+
+The ms-mail form element names are as follows:
+
+Name       Description
+-------    -----------
+subject    A subject header for the mail message.
+           This is optional. If you miss it out a default subject
+           of "Form Data Response" will be used.
+
+mailto     The email address to send the response to.
+           This is a required field.
+
+mailfrom   This email address that the mail will seem to come from.
+           This is optional and in most cases should be mising out
+           as the default of 'webmaster@<hostname>' will be alright.
+
+template   The name of a template file to display when the mail has
+           been sent. This file should be on your web server. If the
+           file contains the special code '!!TABLE!!' on a line all
+           by itself, this code wil be replaced with a table of the
+           parameters sent in the email. This is optional.
+
+nextpage   The name of the next page to display. This is optional.
+           If a template field is given then this field is ignored.
+
+It's probably for the best if you make these fields all of type
+'hidden' as that way your users won't be able to overwrite your values.
+
+The next page displayed can be controlled in a number of ways:
+
+1/ If a template field is given then the file named in the template
+   field is used. This file must be local to the web server and can
+   contain the special code '!!TABLE!!' where the list of parameters
+   will appear. This is the most flexible approach.
+
+2/ If no template field is passed, but a nextapge field is passed
+   then this field is used. In this case a fixed page is displayed.
+   If you don't want to use the '!!TABLE!!' functionality of a template,
+   then you should use this option as it is more efficient.
+
+3/ If no template or nextpage field is given then a default page is
+   displayed. This is pretty ugly and you probably don't want to use it.
+
+
+
+
+DOCUMENTATION
+
+This file is currently all of the documentation you get! if you think 
+you need any more, please let me know.
+
+
+
+SUPPORT
+
+Questions about using this script should be directed to the author at
+dave@mag-sol.com. I also monitor the newsgroup comp.infosys.www.authoring.cgi
+which would be another good place to ask questions.
+
+
+
+COPYRIGHT
+
+(c) 1998, Magnum Solutions Ltd, All rights reserved.
+
+This script is free software; you are free to redistibute it
+and/or modify it under the same terms as Perl itself.

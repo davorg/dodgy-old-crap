@@ -1,0 +1,454 @@
+#!/usr/bin/perl -w
+#
+# Program to run SQL queries against a Sybase database. Works in two
+# modes:
+#
+# 1/ Takes SQL input from the command line, STDIN or a file and fires
+#    it at the database - writing the results to STDOUT.
+#
+# 2/ If no SQL is found from the three sources described above, it goes
+#    into an interactive mode (a bit like isql - but better!)
+#
+# Copywrite (c) 2000, Magnum Solutions Ltd. All rights reserved.
+#
+# This program is free software; you can redistribute it 
+# and/or modify it under the same terms as Perl itself.
+#
+# $Id: sqpl.sybperl,v 1.3 2000/06/09 18:52:46 dave Exp $
+#
+# $Log: sqpl.sybperl,v $
+# Revision 1.3  2000/06/09 18:52:46  dave
+# Changes to handle multiple SQL statements which are separated by
+# semicolons.
+#
+# Revision 1.2  2000/06/04 17:34:03  dave
+# Renamed 'copying' and 'readme' to 'COPYING' and 'README'.
+# Added header info.
+#
+# Revision 1.1.1.1  2000/06/04 17:05:16  dave
+# CVS import
+#
+
+use strict;
+
+use Sybase::CTlib;
+use Getopt::Std;
+use File::Basename;
+
+# Who am i?
+my $ME = basename $0;
+
+$VERSION = sprintf "%d.%02d", '$Revision: 1.3 $ ' =~ /(\d+)\.(\d+)/;
+
+# Allow the user to define their own favourite editor
+my $EDITOR = $ENV{VISUAL} || $ENV{EDITOR} || 'vi';
+
+my %opts;
+getopts('S:U:P:D:f:HFbhvc', \%opts);
+
+# Help!!
+&usage if $opts{h};
+
+# What??
+&version if $opts{v};
+
+# Try to use default values
+my $server = $opts{S} || $ENV{DSQUERY};
+my $user   = $opts{U} || $ENV{DBUSER};
+# If the use has passed a -P option without an associated value
+# the we assume that they meant the password to be an empty string.
+my $pass   = exists $opts{P} ? (defined $opts{P} ? $opts{P} : ''): $ENV{DBPASS};
+my $db     = $opts{D} || $ENV{DB};
+my $nohdrs = $opts{H} || 0;
+my $noftrs = $opts{F} || 0;
+my $box    = $opts{b} || 0;
+my $csv    = $opts{c} || 0;
+
+if ($box && $csv) {
+  warn "[warning] -b and -c cannot both be specified.\n";
+  warn "          -c will take precedence\n";
+  $box = 0;
+}
+
+# Work out if we've got enough info to connect to a database...
+my @errs;
+
+push @errs, 'Database Server ($DSQUERY)' unless defined $server;
+push @errs, 'User ($DBUSER)' unless defined $user;
+
+# ... and die if we don't.
+if (@errs) {
+  warn "\nInsufficient information to connect to database\n";
+  warn "Please check the following information:\n";
+  die join('', map { " * $_\n" } @errs);
+}
+
+# If the $pass is still undefined (Note: not an empty string) then
+# we prompt the user for a password here.
+unless (defined $pass) {
+  print "Password [$server/$user]: ";
+  system('stty -echo');
+  chomp($pass = <STDIN>);
+  system('stty echo');
+  print "\n";
+}
+
+# Find out what SQL we have to run...
+my $sql;
+
+# ... from the command line...
+$sql .= join(' ', @ARGV) . "\n" if @ARGV;
+
+# ... from STDIN...
+unless (-t STDIN) {
+  local $/ = undef;
+  $sql .= <STDIN> . "\n";
+}
+
+# ... and from -f
+if ($opts{f}) {
+  open FILE, $opts{f} or die "Can't open input file $opts{f}: $!\n";
+  local $/ = undef;
+  $sql .= <FILE> . "\n";
+}
+
+# Go no SQL.
+print "No SQL to process.\nGoing into interactive mode\nServer: $server, User: $user\n" unless $sql;
+
+# Connect to the database
+my $dbh = Sybase::CTlib->new($user, $pass, $server)
+  || die "Can't connect to server $server using user $user.\n";
+
+# Define Sybase error callback functions
+ct_callback(CS_CLIENTMSG_CB, \&clientCallback);
+ct_callback(CS_SERVERMSG_CB, \&serverCallback);
+
+# Use the required database (if there is one)
+$dbh->ct_sql("use $db") || die "Fatal database error.\n" if defined $db;
+
+if ($sql) {
+  # The SQL string may consist of multiple SQL statements (particularly
+  # if it has come from a file). To handle this we split the string
+  # on 'go' and execute each statement individually.
+  #
+  # NOTE:
+  #
+  # Actually we split on the word 'go' by itself on a line OR a semicolon
+  # at the end of a line. This isn't as good as is could be as it breaks
+  # on lines like:
+  #
+  # select @@SERVER; select db_name{}
+  #
+  # But then I don't really think that's too much of a problem. Especially
+  # as handling the above example (by just splitting on any semicolon)
+  # would leave us open to problems with lines containing quoted 
+  # semicolons like:
+  #
+  # select * from tab1 where name like '%;%';
+  #
+  # and trying to handle things like that is a whole can of worms that
+  # I just don't want to get in to right now :-)
+  #
+  foreach (split /(?:^\s*go\s*$)|(?:;\s*$)/m, $sql) {
+    run_sql($_) if defined && /\S/;
+  }
+} else {
+  be_isql();
+}
+
+exit;
+
+#
+# Subroutine to take a single SQL statement and run it against our
+# current database.
+#
+# Takes any result sets and formats them nicely.
+#
+sub run_sql {
+  my $sql = shift;
+
+  # This is a good point at which to convert non-Sybase commands
+  # into the equivalent Sybase commands.
+  # e.g. In MySQL the function now() returns the current date and time.
+  #      In Sybase, the equivalent function is getdate().
+  $sql =~ s/\bnow\b/getdate/g;
+
+  # Execute the SQL
+  $dbh->ct_execute($sql);
+  
+  my $result_type = 0;
+
+  # Get each result set in turn
+  while ($dbh->ct_results($result_type) == CS_SUCCEED) {
+
+    # Ignore non-fetchable result sets.
+    next unless $dbh->ct_fetchable($result_type);
+
+    # Get lists of column names and types
+    my @cols = $dbh->ct_col_names;
+    my @types = $dbh->ct_col_types;
+
+    # Get the lengths of all the column names
+    my @lengths = map { length } @cols;
+
+    my @res;
+
+    # For each row in the result set...
+    while (my @data = $dbh->ct_fetch) {
+      # Replace nulls with empty strings
+      @data = map { defined $_ ? $_ : '' } @data; 
+      push @res, [@data];
+
+      # For each column ensure we always have the length of the 
+      # longest row.
+      foreach (0 .. $#data) {
+	$lengths[$_] = length($data[$_]) 
+	  if length($data[$_]) > $lengths[$_];
+      }
+    }
+
+    # If it's a stored proc return code just print it out,
+    # otherwise print a nicely formatted table of results
+    if ($result_type == CS_STATUS_RESULT) {
+      print "\nProcedure return status: $res[0]->[0]\n" unless $noftrs;
+    } else {
+      # Create a printf format string from the lengths
+      # From empirical evidence, it seems that strings have a type
+      # of zero and numbers have various non-zero values. We can use
+      # this to right justify numbers and left-justify text.
+      my $sep = $box ? '|' : ' ';
+      my $format = join($sep, map { $types[$_] ? "%$lengths[$_]s" 
+				      : "%-$lengths[$_]s"} 0 .. $#cols);
+      $format = '|' . $format . '|' if $box;
+
+      $format = join(',', ('"%s"') x @cols) if $csv;
+
+      my $dashes = sprintf "$format\n", map { '-' x $_ } @lengths;
+      $dashes =~ s/\|/+/g if $box;
+
+      unless ($nohdrs) {
+	print "\n";
+	print $dashes if $box;
+	# Print column headings,...
+	printf "$format\n", @cols;
+	# ... a row of dashes...
+	printf $dashes unless $csv;
+      }
+
+      my $num = @res;
+
+      # ... the data itself...
+      printf "$format\n", @{shift @res} while  @res;
+	
+      unless ($noftrs) {
+	print $dashes if $box;
+	# ... and the number of rows returned.
+	print "\n$num row(s) returned\n";
+      }
+    }
+  }
+}
+
+#
+# Sub routine that pretends to be isql
+#
+# Prompt the user to enter a line of SQL and build up an SQL 
+# command which we send to the server (via run_sql) when we
+# find a comma on he end of the string.
+#
+# Also handles a subset of isql commands:
+#
+#  - quit (or q) will exit the program
+#  - reset will forget the current SQL command and start again
+#  - edit (or ed) will open the current SQL command in an editor
+#
+sub be_isql {
+  use Term::ReadLine;
+  my $line;  # To store each line as it's read in
+  my $i = 1; # Count the number of lines we've handled
+             # (this is just for a pretty prompt).
+
+  my $old_sql = '';
+
+  # Hmm... using Term::ReadLine was causing a couple of 
+  # harmless warnings which I haven't had time to investigate,
+  # so I'll turn warnings off for the rest of the function.
+  local $^W = 0; 
+
+  my $term = Term::ReadLine->new($ME);
+
+  while (defined($line = $term->readline("$i> "))) {
+    last if $line =~ /^\s*q(uit)?\s*$/i;
+    $sql .= $line;
+    $i++;
+
+    # If the line ends with a semi-colon, remove the semi-colon from 
+    # the end of the statement & run the statement. Reset the SQL
+    # to an empty string and the line counter to 1.
+    if ($line =~ /;\s*$/) {
+      $sql =~ s/;\s*$//;
+      run_sql($sql);
+      $old_sql = $sql;
+      $sql = '';
+      $i = 1;
+    }
+
+    # If the line is 'ed' or 'edit', save the SQL to a tmp file
+    # and open it in an editor. When the editor is closed, read 
+    # the contents of the file into our variables.
+    if ($line =~ /^\s*(ed(it)?)\s*$/) {
+      $sql =~ s/$1\s*//;
+      open(SQL, ">/tmp/sql.$$") || die "Can't open temp sql file: $!";
+      print SQL ($i == 2) ? $old_sql : $sql;
+      close SQL;
+      system("$EDITOR /tmp/sql.$$");
+      open(SQL, "/tmp/sql.$$") || die "Can't open temp sql file: $!";
+      $i = 1;
+      $sql = '';
+      while (<SQL>) {
+	print "$i> $_";
+	$sql .= $_;
+	$i++;
+      }
+      close SQL;
+      unlink "/tmp/sql.$$";
+      unless (substr($sql, -1, 1) eq "\n") {
+	$sql .= "\n";
+	print "\n";
+      }
+    }
+
+    # If the line is 'redo', re-execute the previous piece of SQL
+    if ($line =~ /^\s*redo\s*/) {
+      $sql = $old_sql;
+      $i = 1;
+      foreach (split(/\n/, $sql)) {
+	print "$i> $_\n";
+	$i++;
+      }
+    }
+
+    # If the line is 'reset', forget the statement and reset
+    # the line counter to 1.
+    if ($line =~ /^\s*reset\s*$/i) {
+      $sql = '';
+      $i = 1;
+    }
+
+    # There are a few commands that are different to isql, so here
+    # we provide help for confused users.
+    if ($line =~ /^\s*(go|exit|vi)\s*$/) {
+      my $cmd = $1;
+      $sql =~ s/$line//;
+      print "Use 'edit' instead of 'vi'\n" if $cmd eq 'vi';
+      print "Use ';' instead of 'go'\n" if $cmd eq 'go';
+      print "Use 'quit' instead of 'exit'\n" if $cmd eq 'exit';
+      $i = 1;
+      foreach (split(/\n/, $sql)) {
+	print "$i> $_\n";
+	$i++;
+      }
+    }
+  }
+}
+
+#
+# Usage
+#
+sub usage {
+  my $sp = ' ' x length($ME);
+
+  print << "END";
+
+Usage: $ME [-S server] [-U user] [-P password] [-D database]
+       $sp [-f SQL file] [more SQL] [< yet more SQL]
+       $sp [-H] [-F] [-v] [-h] [-b] [-c]
+
+where: 'server'       is the name of a valid database server 
+                      (uses \$DSQUERY by default)
+       'user'         is a valid username on that server 
+                      (uses \$DBUSER by default)
+       'password'     is the user\'s password (uses \$DBPASS by default)
+       'database'     is a valid database on the server 
+                      (uses user\'s default DB by default!)
+       'SQL file'     is a file containing SQL statements to execute
+       'more SQL'     is SQL passed on the command line
+       'yet more SQL' is SQL passed in through STDIN
+
+       '-H' displays the results without column headers
+       '-F' displays the results without footer information 
+            (i.e. rows returned and stored proc return status)
+       '-b' displays results in a 'box' format (a bit like MySQL)
+       '-c' displays results in a CSV format
+       '-v' displays version and copywrite information
+       '-h' displays help (this message)
+
+SQL statements are executed in the order:
+
+1/ Command line SQL
+2/ SQL file 
+3/ SQL from STDIN
+
+You can miss any of them out. If you miss out all three, you\'ll be put
+into an interactive SQL session - a bit like isql.
+
+When entering SQL on the command line you should remember that certain
+characters (e.g. '*') are interpreted by the shell before the program
+sees them, so it might be useful to put all SQL within single quotes.
+
+END
+
+  exit;
+}
+
+sub version {
+  print << "END";
+
+$ME, Version $VERSION
+Copywrite (c) 2000, Magnum Solutions Ltd. All rights reserved.
+
+This program is free software; you can redistribute it 
+and/or modify it under the same terms as Perl itself.
+
+END
+
+  exit;
+}
+
+#
+# Sybase client message handler
+#
+sub clientCallback {
+  my($layer, $origin, $severity, $number, $msg, $osmsg) = @_;
+
+  print STDERR "Error: LAYER = ($layer) ORIGIN = ($origin)";
+  print STDERR "SEVERITY = ($severity) NUMBER = ($number)\n";
+  printf STDERR "Message String: \n$msg\n";
+
+  printf STDERR "Operating System Error: %s\n", $osmsg 
+    if defined($osmsg);
+
+  CS_SUCCEED;
+}
+
+#
+# Sybase server message handler
+#
+sub serverCallback {
+  my($cmd, $number, $severity, $state, $line, $server, $proc, $msg) = @_;
+
+  if ($severity > 10) {
+    print STDERR "Error: $number, Severity $severity, ";
+    print STDERR "State $state, Line $line\n";
+
+    print STDERR "Server '$server'\n" if defined($server);
+
+    print STDERR "Procedure '$proc'\n" if defined($proc);
+
+    print STDERR "Message String: \n$msg\n";
+  } else {
+    print "$msg\n";
+  }
+  CS_SUCCEED;
+}
+

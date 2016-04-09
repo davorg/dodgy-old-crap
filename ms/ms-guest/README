@@ -1,0 +1,135 @@
+                     M S - G U E S T   v 2 . 0
+                   -----------------------------
+
+ms-guest.pl is a simple guest-book script for World Wide Web pages.
+It allows visitors to a page to write comments which are stored 
+along with their name and email address. These comments can then be 
+viewed by later visitors to the same page.
+
+
+
+AVAILABILITY
+
+The latest version of ms-guest should always be available from:
+
+     http://www.mag-sol.com/Download.shtml
+
+
+PREREQUISITES
+
+In order to install and use this script you will need Perl version
+5.002 or better.  This package also depends on packages that are 
+distributed separately from perl.  We recommend that you have
+the following packages installed before you install ms-guest:
+
+  CGI            (bundled with perl5.004 and better)
+  FreezeThaw
+
+These packages should be available on CPAN (the Comprehensive
+Perl Archive Network) and your nearest CPAN mirror can be found
+at www.perl.com.
+
+
+
+INSTALLATION
+
+ms-guest is distributed as a gzipped tar file. To extract the files
+from the archive type the following commands:
+
+    gunzip ms-guest.tar.gz
+    tar xvf ms-guest.tar
+
+You will end up with three files called README (this file), COPYING
+and ms-guest.pl.
+
+Installation of ms-guest is as simple as copying the file ms-guest.pl
+into the cgi directory of your web server. This directory may be called
+cgi or cgi-bin or perhaps something completely different. If in doubt
+ask the person responsible for running your web server.
+
+
+
+USAGE
+
+ms-guest can be used in two modes. In the simple mode you just insert 
+a call to the cgi script in your HTML page. This might look something
+like this:
+
+<P>Please sign our <A HREF="/cgi/ms-guest.pl">Guest Book</A>.</P>
+
+ms-guest will then generate a default guest book page. To see what 
+this looks like try entering the URL
+
+http://www.mag-sol.com/cgi/ms-guest.pl
+
+in your browser.
+
+If you want to maintain more than one guest book on a site you can 
+pass a file parameter to the script. The default file name is 'guest'. 
+A site that had two guest books might (just) have this HTML fragment 
+on it:
+
+<P>Please sign our <A HREF="/cgi/ms-guest.pl?file=guest1">first</A>
+or <A HREF="/cgi/ms-guest.pl?gile=guest2">second</A> guest books.</P>
+
+ms-guest takes one other parameter which is a template file name. This
+allows you to customise your guest book page to look however you like.
+
+A template is a normal HTML file that contains two special tags, 
+'!!FORM!!' is inserted where you want the form for entering comments 
+and '!!COMMENTS!!' is inserted where you want the comments displayed. 
+A link to one of these pages would look something like this: 
+
+<P>Please sign our 
+<A HREF="/cgi/ms-guest.pl?file=guest1&template=guest.html">guest 
+book</A>.</P>
+
+An example of this usage can be seen in the guest book link on the 
+Magnum Solutions main page at:
+
+    http://www.mag-sol.com
+
+and if you want to see what the page looks like before the tags
+are replaced by the cgi scripts, take a look at:
+
+    http://www.mag-sol.com/Guest.html
+
+The default guest book page contains a copyright notice and a link
+to the Magnum Solutions home page. I'd appreciate it if you would
+do the same on any pages you create.
+
+As of version 2.0, the ms-guest distribution also includes another
+progrma called e-guest.pl which allows you to edit your guest book.
+e-guest is passed the name of the guest book file, like this:
+
+    http://www.mag-sol.com/cgi/e-guest.pl?file=sample
+
+You should probably consider adding some sort of security on the 
+eecution of this file!
+
+Please let me know where you're using ms-guest so I can pop by and
+have a look. I'll also keep you informed of new releases.
+
+
+
+DOCUMENTATION
+
+This file is currently all of the documentation you get! if you think 
+you need any more, please let me know.
+
+
+
+SUPPORT
+
+Questions about using this script should be directed to the author at
+dave@mag-sol.com. I also monitor the newsgroup comp.infosys.www.authoring.cgi
+which would be another good place to ask questions.
+
+
+
+COPYRIGHT
+
+(c) 1998, 2000 Magnum Solutions Ltd, All rights reserved.
+
+This script is free software; you are free to redistibute it
+and/or modify it under the same terms as Perl itself.

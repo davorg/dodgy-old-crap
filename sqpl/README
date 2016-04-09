@@ -1,0 +1,104 @@
+                         sqpl
+                         ----
+
+What is sqpl?
+-------------
+
+sqpl is a program for running SQL queries against a Sybase database. It 
+works in one of two modes:
+
+* If it is passed some SQL either on the command line, from
+  STDIN or in a file it will run that SQL against the database
+  and write the results to STDOUT.
+
+* If no SQL is found, it will go into an interactive moden (a bit like 
+  isql - but better!)
+
+
+Features of sqpl
+----------------
+
+* Choice of output formats:
+  + standard isql-style
+  + box mode (like mysql)
+  + CSV mode
+
+* Choice of DBI/DBD::Sybase or Sybase::CTlib versions.
+
+* Connection paramters configured using environment variables or command
+  line parameters.
+
+* Switch off header and footer information.
+
+* Use your favourite text editor to edit SQL queries.
+
+
+Differences from isql
+---------------------
+
+* Uses ';' instead of 'go' to terminate SQL queries.
+
+* Uses 'edit' instead of 'vi' to edit queries.
+
+* Uses 'quit' instead of 'exit' to finish a session.
+
+
+Using sqpl
+----------
+
+Usage: sqpl [-S server] [-U user] [-P password] [-D database]
+            [-f SQL file] [more SQL] [< yet more SQL]
+            [-H] [-F] [-v] [-h] [-b] [-c]
+
+where: 'server'       is the name of a valid database server 
+                      (uses \$DSQUERY by default)
+       'user'         is a valid username on that server 
+                      (uses \$DBUSER by default)
+       'password'     is the user\'s password (uses \$DBPASS by default)
+       'database'     is a valid database on the server 
+                      (uses user\'s default DB by default!)
+       'SQL file'     is a file containing SQL statements to execute
+       'more SQL'     is SQL passed on the command line
+       'yet more SQL' is SQL passed in through STDIN
+
+       '-H' displays the results without column headers
+       '-F' displays the results without footer information 
+            (i.e. rows returned and stored proc return status)
+       '-b' displays results in a 'box' format (a bit like MySQL)
+       '-c' displays results in a CSV format
+       '-v' displays version and copywrite information
+       '-h' displays help
+
+SQL statements are executed in the order:
+
+1/ Command line SQL
+2/ SQL file 
+3/ SQL from STDIN
+
+You can miss any of them out. If you miss out all three, you\'ll be put
+into an interactive SQL session - a bit like isql.
+
+When entering SQL on the command line you should remember that certain
+characters (e.g. '*') are interpreted by the shell before the program
+sees them, so it might be useful to put all SQL within single quotes.
+
+Having entered a statement you can edit it by typing 'edit' at the 
+prompt. The editor used is determined by the value in the $EDITOR or
+$VISUAL enviroment variable (vi is used by default).
+
+
+Author
+------
+
+sqpl was written by Dave Cross <dave@mag-sol.com>. Please feel free 
+to contact him with any questions, bugs, patches or (especially)
+praise.
+
+
+Copyright
+---------
+
+sqpl is copyright (c) 2000, Magnum Solutions Ltd. All rights reserved.
+
+This program is free software; you can redistribute it 
+and/or modify it under the same terms as Perl itself.

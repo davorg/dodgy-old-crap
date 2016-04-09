@@ -1,0 +1,18 @@
+<table>
+<tr>
+<td valign="top"><h2>Individuals</h2>
+<ul>
+[% FOREACH person = family.people.keys.sort %]
+<li><a href="[% href(person) %]">[% family.people.$person.name %]</a></li>
+[% END %]
+</ul>
+</td>
+<td valign="top"><h2>Families</h2>
+<ul>
+[% FOREACH fam = family.families.keys.sort %]
+<li><a href="[% href(fam) %]">[% family.families.$fam.husband.name %]/[% family.families.$fam.wife.name %]</a></li>
+[% END %]
+</ul>
+</td>
+</tr>
+</table>

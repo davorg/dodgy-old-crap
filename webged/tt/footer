@@ -1,0 +1,14 @@
+<hr>
+<table width="100%">
+<tr>
+<td align="left">
+<address>Produced by webgen [% version %]
+<br>from <a href="[% ged_url %]">[% ged_name %]</a></address>
+</td>
+<td align="right">
+<address><a href="mailto:[% email %]">[% contact %]</a></address>
+</td>
+</tr>
+</table>
+</body>
+</html>

@@ -1,0 +1,7 @@
+
+<table border=1>
+<tr><th>Parents:</th><td><a href="[% family.husband.id %].html">[% family.husband.name %]</a> / <a href="[% family.wife.id %].html">[% family.wife.name %]</a></td></tr>
+<tr><th>Wedding</th><td>[% family.date %] - [% family.place %]<td></tr>
+<tr><th>Children: </th><td>&nbsp;</td></tr>[% FOREACH child = family.children %]
+<tr><th>&nbsp;</th><td><a href="[% href(child.id) %]">[% child.name %]</a> ([%child.birth %])</td></tr>[% END %]
+</table>
